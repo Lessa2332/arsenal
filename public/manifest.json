@@ -1,0 +1,14 @@
+{
+  "name": "Arsenal AR Tabletop",
+  "short_name": "Arsenal AR",
+  "description": "Грай у футбол прямо на столі в барі Арсенал 2.0",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#ff1493",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
