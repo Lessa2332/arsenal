@@ -10,37 +10,46 @@
   
   <title>Arsenal AR Tabletop ⚽</title>
   
-  <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/assets/icon-192.png">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png">
   
-  <!-- Preconnect для швидкого завантаження CDN -->
+  <!-- Preconnect -->
   <link rel="preconnect" href="https://aframe.io">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   
-  <!-- A-Frame + MindAR -->
+  <!-- Import Map для ESM модулів -->
+  <script type="importmap">
+  {
+    "imports": {
+      "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js",
+      "three": "https://cdn.jsdelivr.net/npm/three@0.164.0/build/three.module.js"
+    }
+  }
+  </script>
+
+  <!-- A-Frame (не ESM, тому script tag) -->
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  
-  <!-- Cannon-es для фізики -->
-  <script src="https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"></script>
   
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
   <style>
-    /* Critical CSS — завантажується першим */
+    /* Critical CSS inline для швидкого першого рендеру */
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; font-family: 'SF Pro Display', system-ui, -apple-system, sans-serif; touch-action: none; }
-    #loading-screen { position: fixed; inset: 0; background: #0a0a0f; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; font-family: system-ui, -apple-system, sans-serif; touch-action: none; }
+    #loading-screen { position: fixed; inset: 0; background: #0a0a0f; z-index: 100000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
     #loading-screen.hidden { opacity: 0; pointer-events: none; }
-    .loader { width: 60px; height: 60px; border: 3px solid #1a1a2e; border-top-color: #ff1493; border-radius: 50%; animation: spin 1s linear infinite; }
+    .loader { width: 50px; height: 50px; border: 3px solid #1a1a2e; border-top-color: #ff1493; border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .loader-text { color: #ff1493; margin-top: 20px; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; }
+    .loader-text { color: #ff1493; margin-top: 16px; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; }
   </style>
+  
+  <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
 
-  <!-- Екран завантаження -->
+  <!-- Loading Screen -->
   <div id="loading-screen">
     <div class="loader"></div>
     <div class="loader-text">Arsenal AR</div>
@@ -61,11 +70,14 @@
     embedded>
     
     <!-- Assets -->
-    <a-assets>
-      <img id="grass-texture" src="/assets/textures/field-grass.jpg" crossorigin="anonymous">
-      <img id="wood-texture" src="/assets/textures/wood-floor.jpg" crossorigin="anonymous">
-      <img id="goal-net" src="/assets/textures/goal-net.png" crossorigin="anonymous">
-      <a-asset-item id="stadium-model" src="/assets/models/stadium.glb"></a-asset-item>
+    <a-assets timeout="10000">
+      <!-- Текстури — використовуємо inline fallback якщо 404 -->
+      <img id="grass-texture" src="./assets/textures/field-grass.jpg" crossorigin="anonymous">
+      <img id="wood-texture" src="./assets/textures/wood-floor.jpg" crossorigin="anonymous">
+      <img id="goal-net" src="./assets/textures/goal-net.png" crossorigin="anonymous">
+      
+      <!-- Опціональна модель -->
+      <a-asset-item id="stadium-model" src="./assets/models/stadium.glb"></a-asset-item>
     </a-assets>
 
     <!-- Lighting -->
@@ -76,67 +88,56 @@
     <!-- Camera -->
     <a-camera position="0 0 0" look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
 
-    <!-- Marker Container (тимчасовий) -->
+    <!-- Marker Container -->
     <a-entity id="marker-container" mindar-image-target="targetIndex: 0" visible="false">
-      <!-- Підставка-якір -->
       <a-plane id="marker-plane" position="0 0 0" rotation="-90 0 0" width="0.1" height="0.1" color="#ff1493" opacity="0.3"></a-plane>
     </a-entity>
 
-    <!-- Game Anchor (незалежний після фіксації) -->
+    <!-- Game Anchor -->
     <a-entity id="game-anchor" visible="false">
       
-      <!-- 🏟️ Стадіон / Поле -->
+      <!-- Поле з fallback кольором -->
       <a-entity id="stadium-group">
-        <!-- Основне поле -->
         <a-plane id="field" 
           position="0 -0.01 0" 
           rotation="-90 0 0" 
           width="1.2" 
           height="1.8" 
+          color="#2E8B57"
           material="src: #grass-texture; repeat: 4 6; roughness: 0.9; metalness: 0"
           shadow="receive: true">
         </a-plane>
         
-        <!-- Борти поля (3D рамка) -->
+        <!-- Борти -->
         <a-box position="0 0.02 -0.9" width="1.2" height="0.04" depth="0.04" color="#8B4513" material="src: #wood-texture; repeat: 3 1"></a-box>
         <a-box position="0 0.02 0.9" width="1.2" height="0.04" depth="0.04" color="#8B4513" material="src: #wood-texture; repeat: 3 1"></a-box>
         <a-box position="-0.6 0.02 0" width="0.04" height="0.04" depth="1.8" color="#8B4513" material="src: #wood-texture; repeat: 1 5"></a-box>
         <a-box position="0.6 0.02 0" width="0.04" height="0.04" depth="1.8" color="#8B4513" material="src: #wood-texture; repeat: 1 5"></a-box>
         
-        <!-- Розмітка поля -->
+        <!-- Розмітка -->
         <a-ring position="0 0.001 0" rotation="-90 0 0" radius-inner="0.15" radius-outer="0.16" color="white" opacity="0.8"></a-ring>
         <a-plane position="0 0.001 0" rotation="-90 0 0" width="1.2" height="0.02" color="white" opacity="0.6"></a-plane>
         <a-plane position="0 0.001 0" rotation="-90 0 0" width="0.02" height="1.8" color="white" opacity="0.6"></a-plane>
-        
-        <!-- Центральне коло -->
         <a-ring position="0 0.002 0" rotation="-90 0 0" radius-inner="0.18" radius-outer="0.2" color="white" opacity="0.7"></a-ring>
       </a-entity>
 
-      <!-- 🥅 Ворота -->
+      <!-- Ворота -->
       <a-entity id="goal-group" position="0 0 -0.75">
-        <!-- Ліва стійка -->
         <a-cylinder position="-0.2 0.1 0" radius="0.015" height="0.2" color="#ddd" metalness="0.3" roughness="0.5" shadow="cast: true"></a-cylinder>
-        <!-- Права стійка -->
         <a-cylinder position="0.2 0.1 0" radius="0.015" height="0.2" color="#ddd" metalness="0.3" roughness="0.5" shadow="cast: true"></a-cylinder>
-        <!-- Перекладина -->
         <a-cylinder position="0 0.2 0" rotation="0 0 90" radius="0.015" height="0.4" color="#ddd" metalness="0.3" roughness="0.5" shadow="cast: true"></a-cylinder>
-        <!-- Сітка -->
         <a-plane position="0 0.1 -0.01" width="0.4" height="0.2" material="src: #goal-net; transparent: true; opacity: 0.6; side: double" color="#eee"></a-plane>
-        <!-- Задня стінка сітки -->
         <a-plane position="0 0.1 -0.05" width="0.4" height="0.2" rotation="0 180 0" material="src: #goal-net; transparent: true; opacity: 0.4; side: double" color="#eee"></a-plane>
       </a-entity>
 
-      <!-- ⚽ М'яч (створюється динамічно) -->
+      <!-- Контейнери для динамічних об'єктів -->
       <a-entity id="ball-container"></a-entity>
-
-      <!-- 🧱 Перешкоди (створюються динамічно) -->
       <a-entity id="obstacles-container"></a-entity>
-
-      <!-- 💡 Ефекти -->
       <a-entity id="effects-container"></a-entity>
     </a-entity>
   </a-scene>
 
-  <script type="module" src="/src/main.js"></script>
+  <!-- Module script -->
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>
